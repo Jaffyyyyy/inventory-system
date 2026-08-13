@@ -1,0 +1,33 @@
+import pandas as pd
+import gspread
+import time
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Setup Google Sheets API credentials
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+def upload_inventory():
+    try:
+        # Load your security credentials (you will need to generate a credentials.json file from Google Cloud)
+        creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+        client = gspread.authorize(creds)
+
+        # Open the online Google spreadsheet by its name
+        sheet = client.open("My_Online_Inventory").sheet1
+        
+        # Read your local offline inventory data (e.g., from a CSV file)
+        local_data = pd.read_csv('local_inventory.csv')
+        
+        # Clear existing online data and upload the fresh offline data
+        sheet.clear()
+        sheet.update([local_data.columns.values.tolist()] + local_data.values.tolist())
+        print("Success: Inventory successfully synced to the cloud!")
+        
+    except Exception as e:
+        print(f"Sync failed (offline or error): {e}")
+
+# This loop tries to upload the data automatically every 60 seconds
+while True:
+    print("Checking connection and syncing inventory...")
+    upload_inventory()
+    time.sleep(60) # Waits 60 seconds before trying again
